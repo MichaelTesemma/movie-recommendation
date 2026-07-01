@@ -2,7 +2,7 @@
 
 A single-user movie and TV show recommendation engine powered by TMDB data. Rate what you've seen with 1–5 stars and get personalized recommendations based on genre, keyword, cast/crew, and era preferences.
 
-Built with [Next.js 16](https://nextjs.org) (App Router), TypeScript, Tailwind CSS v4, [Prisma v7](https://prisma.io) + SQLite, and the [TMDB API](https://developer.themoviedb.org).
+Built with [Next.js 16](https://nextjs.org) (App Router), TypeScript, Tailwind CSS v4, [Firebase Firestore](https://firebase.google.com/docs/firestore), and the [TMDB API](https://developer.themoviedb.org).
 
 ## Features
 
@@ -19,6 +19,7 @@ Built with [Next.js 16](https://nextjs.org) (App Router), TypeScript, Tailwind C
 
 - Node.js 22+
 - A [TMDB API key](https://www.themoviedb.org/settings/api) (free)
+- A [Firebase project](https://console.firebase.google.com) with Firestore enabled
 
 ### Setup
 
@@ -28,9 +29,9 @@ npm install
 
 # Set environment variables
 cp .env.example .env
-# Add your TMDB_API_KEY to .env
+# Add your TMDB_API_KEY and Firebase service account key to .env
 
-# Create and seed the database (fetches ~1000 movies + ~1000 TV shows from TMDB)
+# Seed the database (fetches ~8000+ movies + ~8000+ TV shows from TMDB via discover endpoint)
 npm run seed
 
 # Start the dev server
@@ -39,18 +40,31 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Firebase Configuration
+
+1. Create a Firebase project at https://console.firebase.google.com
+2. Enable **Firestore** (native mode)
+3. Go to **Project Settings → Service accounts** → **Generate new private key**
+4. Save the downloaded JSON as `firebase-key.json` in the project root (already gitignored)
+5. Set the JSON content as the `FIREBASE_PRIVATE_KEY` environment variable on Vercel
+
 ### Commands
 
 | Command | Description |
 |---|---|
 | `npm run dev` | Start development server |
 | `npm run build` | Production build |
-| `npm run seed` | Seed database from TMDB (rate-limited to 48 req/s) |
+| `npm run seed` | Seed database from TMDB (discover endpoint, rate-limited to 48 req/s) |
+| `npm test` | Run test suite |
 | `npm run lint` | Run ESLint |
 
 ## Deployment
 
-Can be deployed to Vercel with zero configuration. Set `TMDB_API_KEY` as an environment variable. No external database needed — SQLite is stored in `prisma/dev.db`.
+```bash
+vercel deploy --prod
+```
+
+Set `TMDB_API_KEY` and `FIREBASE_PRIVATE_KEY` as Vercel environment variables. The Firebase service account JSON should be set as the value of `FIREBASE_PRIVATE_KEY`.
 
 ## Architecture
 
@@ -58,7 +72,7 @@ Can be deployed to Vercel with zero configuration. Set `TMDB_API_KEY` as an envi
 src/
 ├── app/
 │   ├── api/
-│   │   ├── movies/         Movie/TV data (TMDB + DB)
+│   │   ├── movies/         Movie/TV data (TMDB + Firestore)
 │   │   ├── ratings/        CRUD for star ratings
 │   │   ├── recommendations/ Multi-signal scoring engine
 │   │   ├── profile/        Taste profile aggregation
@@ -74,15 +88,27 @@ src/
 │   ├── features.ts         Feature extraction & similarity
 │   └── types.ts            Type definitions
 └── lib/
-    ├── prisma.ts           Prisma client (better-sqlite3 adapter)
+    ├── firebase.ts         Firebase Admin SDK client
+    ├── db.ts               Firestore database abstraction
     ├── tmdb.ts             TMDB API wrapper
+    ├── types.ts            Document type definitions
     └── seed.ts             Database seeder
 ```
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router, Turbopack)
-- **Database**: Prisma v7 + SQLite (better-sqlite3)
+- **Database**: Firebase Firestore (via Admin SDK)
 - **UI**: Tailwind CSS v4, framer-motion, lucide-react
-- **Data**: TMDB API (movies + TV, 48 req/s rate-limited fetching)
+- **Data**: TMDB API (movies + TV, discover endpoint, 48 req/s rate-limited)
 - **Font**: Geist (Vercel)
+- **Testing**: Vitest
+
+## Testing
+
+```bash
+npm test        # Run tests once
+npm run test:watch  # Watch mode
+```
+
+Tests cover the recommendation engine (feature extraction, profile building, scoring), TMDB utility functions, and UI utilities.

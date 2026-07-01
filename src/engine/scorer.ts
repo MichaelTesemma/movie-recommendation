@@ -1,9 +1,7 @@
-import type { Movie, Genre, Keyword, CastMember } from "@prisma/client";
 import { extractFeatureVector, cosineSimilarity, jaccardSimilarity } from "./features";
 import type { UserProfile, ScoredMovie, SignalWeights } from "./types";
-import { posterUrl } from "@/lib/tmdb";
 
-type MovieWithRelations = Movie & { genres: Genre[]; keywords: Keyword[]; cast: CastMember[] };
+interface MovieLike { id: number; title: string; posterPath: string; releaseDate: Date | null; runtime: number | null; genres: { id: number; name: string }[]; keywords: { id: number }[]; cast: { tmdbId: number; role: string }[] }
 
 const DEFAULT_WEIGHTS: SignalWeights = {
   genre: 0.30,
@@ -23,7 +21,7 @@ const COLD_START_WEIGHTS: SignalWeights = {
 
 export function scoreMovies(
   profile: UserProfile,
-  candidates: MovieWithRelations[],
+  candidates: MovieLike[],
   likedMovieIds: number[],
   signalWeights?: Partial<SignalWeights>
 ): ScoredMovie[] {

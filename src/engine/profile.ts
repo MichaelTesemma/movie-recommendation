@@ -1,9 +1,8 @@
-import type { Rating, Movie, Genre, Keyword, CastMember } from "@prisma/client";
 import type { UserProfile } from "./types";
 
-type MovieWithRelations = Movie & { genres: Genre[]; keywords: Keyword[]; cast: CastMember[] };
+interface RatingLike { value: number; movie: { genres: { id: number }[]; keywords: { id: number }[]; cast: { tmdbId: number }[]; releaseDate: Date | null } }
 
-export function buildProfile(ratings: (Rating & { movie: MovieWithRelations })[]): UserProfile {
+export function buildProfile(ratings: RatingLike[]): UserProfile {
   const genreWeights: Record<number, number> = {};
   const keywordVec: Record<number, number> = {};
   const crewScores: Record<number, number> = {};

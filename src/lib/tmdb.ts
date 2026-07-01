@@ -160,4 +160,12 @@ export async function fetchTVGenres() {
   return tmdbFetch<{ genres: TMDBGenre[] }>(`/genre/tv/list`);
 }
 
+export async function fetchDiscoverMovie(params: Record<string, string>) {
+  return tmdbFetch<TMDBPaginatedResult>(`/discover/movie`, params);
+}
+
+export async function fetchDiscoverTV(params: Record<string, string>) {
+  return tmdbFetch<TMDBTVPaginatedResult>(`/discover/tv`, params);
+}
+
 export type { TMDBMovieResult, TMDBTVResult, TMDBPaginatedResult, TMDBTVPaginatedResult, TMDBGenre, TMDBKeyword, TMDBPerson, TMDBMovieDetail, TMDBTVDetail };

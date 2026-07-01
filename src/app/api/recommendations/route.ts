@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getRatings, getMovie, getAllMovies, getSkippedIds } from "@/lib/db";
 import { buildProfile } from "@/engine/profile";
 import { scoreMovies } from "@/engine/scorer";
 import { posterUrl } from "@/lib/tmdb";
@@ -9,25 +9,32 @@ export async function GET(request: NextRequest) {
   const n = parseInt(searchParams.get("n") ?? "50");
   const type = searchParams.get("type") ?? "movie";
 
-  const ratings = await prisma.rating.findMany({
-    include: {
-      movie: { include: { genres: true, keywords: true, cast: true } },
-    },
-    where: { movie: { mediaType: type } },
+  const ratings = await getRatings();
+  const allMovies = await getAllMovies();
+
+  const filteredRatings = ratings.filter((r) => {
+    const movie = allMovies.find((m) => m.id === r.movieId);
+    return movie && movie.mediaType === type;
   });
 
-  const profile = buildProfile(ratings);
+  const movieMap = new Map(allMovies.map((m) => [m.id, m]));
+  const enrichedRatings = filteredRatings.map((r) => ({
+    ...r,
+    createdAt: r.createdAt instanceof Date ? r.createdAt : new Date(),
+    movie: movieMap.get(r.movieId)!,
+  }));
 
-  const skippedIds = (await prisma.skip.findMany({ select: { movieId: true } })).map((s) => s.movieId);
-  const ratedIds = new Set(ratings.map((r) => r.movieId));
+  const profile = buildProfile(enrichedRatings);
 
-  const allMovies = await prisma.movie.findMany({
-    where: { mediaType: type, id: { notIn: [...ratedIds, ...skippedIds] } },
-    include: { genres: true, keywords: true, cast: true },
-  });
+  const skippedIds = await getSkippedIds();
+  const ratedIds = new Set(filteredRatings.map((r) => r.movieId));
 
-  const likedIds = ratings.filter((r) => r.value >= 3).map((r) => r.movieId);
-  const scored = scoreMovies(profile, allMovies, likedIds);
+  const candidates = allMovies.filter(
+    (m) => m.mediaType === type && !ratedIds.has(m.id) && !skippedIds.has(m.id)
+  );
+
+  const likedIds = filteredRatings.filter((r) => r.value >= 3).map((r) => r.movieId);
+  const scored = scoreMovies(profile, candidates, likedIds);
 
   let top = scored.slice(0, 60);
   if (searchParams.get("shuffle") === "1") {

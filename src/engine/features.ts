@@ -1,7 +1,6 @@
-import type { Movie } from "@prisma/client";
 import type { MovieFeatureVector } from "./types";
 
-export function extractFeatureVector(movie: Movie & { genres: { id: number }[]; keywords: { id: number }[]; cast: { tmdbId: number; role: string }[] }): MovieFeatureVector {
+export function extractFeatureVector(movie: { genres: { id: number }[]; keywords: { id: number }[]; cast: { tmdbId: number; role: string }[]; releaseDate?: Date | null; id: number; runtime: number | null }): MovieFeatureVector {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 2000;
   return {
     movieId: movie.id,

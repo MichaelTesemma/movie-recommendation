@@ -5,3 +5,6 @@ node_modules/
 .env
 .superpowers/
 docs/
+.vercel
+.env*
+firebase-key.json
